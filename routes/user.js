@@ -8,4 +8,6 @@ router.post('/register', userController.createUserProfile);
 
 router.post('/login', userController.validateUserProfile);
 
+router.post('/authenticate', userController.authenticateUser);
+
 module.exports = router;
