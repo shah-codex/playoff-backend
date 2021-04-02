@@ -52,13 +52,11 @@ const insertAuthenticationDetails = function(email, oneTimePassword) {
     let timestamp = utils.generateUnixTimestamp();          // Generating the UNIX timestamp for the users temperory OTP.
 
     // Inserting the record in the database with the generated OTP for the user or Updating the record in case if already exist.
-    db.query("INSERT INTO AuthenticateUser (AuthenticateUser.email, AuthenticateUser.otp, AuthenticateUser.otp_expiration) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, otp_expiration = ?", [email, oneTimePassword, timestamp, oneTimePassword, timestamp])
-    .then(result => {
-        return true;
-    })
-    .catch(err => {
-        console.log(err);
-        return false;
+    db.query("INSERT INTO AuthenticateUser (AuthenticateUser.email, AuthenticateUser.otp, AuthenticateUser.otp_expiration) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, otp_expiration = ?", [email, oneTimePassword, timestamp, oneTimePassword, timestamp], (err, result, fields) => {
+        if(err) {
+            console.log(err);
+            return false;
+        }
     });
     return true;
 }
@@ -107,26 +105,29 @@ exports.createUserProfile = (req, res, next) => {
 exports.validateUserProfile = (req, res, next) => {
     // Fields retrieved from the request body from the user.
     const email = req.body.email;              // name of the user.
-    const password = req.body.password;      // password of the user.
+    const password = req.body.password;        // password of the user.
 
     // Hashing the password sent by the user to check with the actual
     // password stored in the database.
     const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
     // Validating the user with its respected username and password.
-    db.execute("SELECT User.email, User.password FROM User WHERE User.email = ? AND User.password = ?", [email, hashedPassword])
+    db.execute("SELECT User.email, User.name FROM User WHERE User.email = ? AND User.password = ?", [email, hashedPassword])
     .then(([rows, constraints]) => {
         // Checking if the data provided by the user in the request body
         // matches the data stored in the actual database and is not empty.
-        if(rows[0].password === hashedPassword) {
+        if(rows[0]) {
             const name = rows[0].name;              // Accessing the name from the database for corresponding user
-            const location = rows[0].location;      // Accessing the location of the user from the database
+            const email = rows[0].email;            // Accessing the location of the user from the database
 
             // Returning the success response if the username and password matches.
             return res.status(200).json({
                 message: 'login successful',
-                user: { name: name, location: location }
+                user: { name: name, email: email }
             });
+        } else {
+            // Throwing a error if row doesn't have any data.
+            throw Error("incorrect username or password");
         }
     })
     .catch(err => {
