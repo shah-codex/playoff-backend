@@ -10,4 +10,5 @@ router.post('/login', userController.validateUserProfile);
 
 router.post('/authenticate', userController.authenticateUser);
 
+router.delete('/remove', userController.deleteUser);
 module.exports = router;
