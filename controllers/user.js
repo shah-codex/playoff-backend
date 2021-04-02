@@ -102,6 +102,27 @@ exports.createUserProfile = (req, res, next) => {
     });
 }
 
+exports.deleteUser = (req, res, next) => {
+    const email = req.body.email;
+
+    db.query("DELETE FROM User WHERE email = ?", [email])
+    .then(result => {
+        if(result[0].affectedRows > 0) {
+            res.status(201).json({
+                message: 'successfully deleted the account'
+            });
+        } else {
+            throw Error('User does not exists');
+        }
+    })
+    .catch(err => {
+        console.log(err);
+        res.status(500).json({
+            message: 'failed to delete user account'
+        });
+    })
+}
+
 exports.validateUserProfile = (req, res, next) => {
     // Fields retrieved from the request body from the user.
     const email = req.body.email;              // name of the user.
