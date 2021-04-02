@@ -48,11 +48,11 @@ exports.authenticateUser = (req, res, next) => {
     });
 }
 
-const insertAuthenticationDetails = function(username, oneTimePassword) {
+const insertAuthenticationDetails = function(email, oneTimePassword) {
     let timestamp = utils.generateUnixTimestamp();          // Generating the UNIX timestamp for the users temperory OTP.
 
     // Inserting the record in the database with the generated OTP for the user or Updating the record in case if already exist.
-    db.query("INSERT INTO AuthenticateUser (AuthenticateUser.name, AuthenticateUser.otp, AuthenticateUser.otp_expiration) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, otp_expiration = ?", [username, oneTimePassword, timestamp, oneTimePassword, timestamp])
+    db.query("INSERT INTO AuthenticateUser (AuthenticateUser.email, AuthenticateUser.otp, AuthenticateUser.otp_expiration) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE otp = ?, otp_expiration = ?", [email, oneTimePassword, timestamp, oneTimePassword, timestamp])
     .then(result => {
         return true;
     })
@@ -67,30 +67,30 @@ exports.createUserProfile = (req, res, next) => {
     // Fields retrieved from the request body sent by the user.
     const username = req.body.name;                          // username of the user.
     const password = req.body.password;                      // password is the hashed string sent from the client/user.
-    const location = req.body.location;                      // location is the actual location of user that he entered.
+    const email = req.body.email;                      // location is the actual location of user that he entered.
     const oneTimePassword = req.body.oneTimePassword;        // OTP is the value used passed by user to verify his/her account.
 
     // Hashing the password to store it in the database.
     const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
     // Getting the user from database to compare it with the OTP obtain from the user and checking whether or not if it's expired.
-    db.query("SELECT AuthenticateUser.name 'username' FROM AuthenticateUser WHERE AuthenticateUser.name = ? AND AuthenticateUser.otp = ? AND otp_expiration >= UNIX_TIMESTAMP()", [username, oneTimePassword])
+    db.query("SELECT AuthenticateUser.email FROM AuthenticateUser WHERE AuthenticateUser.email = ? AND AuthenticateUser.otp = ? AND otp_expiration >= UNIX_TIMESTAMP()", [email, oneTimePassword])
     .then(([result, constraint]) => {
-        if(result[0].username) {
+        if(result[0].email) {
             // Inserting the user registration details in the database.
-            db.query("INSERT INTO User (User.name, User.password, User.location) values (?, ?, ?)", [username, hashedPassword, location])
+            db.query("INSERT INTO User (User.email, User.password, User.name) values (?, ?, ?)", [email, hashedPassword, username])
             .then(result => {
                 // Returning the response with the success message with status code 201.
                 return res.status(201).json({
                     message: 'successfully registered',
-                    user: { name: username, location: location }
+                    user: { name: username, email: email }
                 });
             })
             .catch(err => {
                 // Returning the error response of 501 in case of the failure.
                 console.log(err);
                 res.status(500).json({
-                    message: 'username already exists'
+                    message: 'user already exists'
                 });
             });
         }
@@ -106,7 +106,7 @@ exports.createUserProfile = (req, res, next) => {
 
 exports.validateUserProfile = (req, res, next) => {
     // Fields retrieved from the request body from the user.
-    const name = req.body.name;              // name of the user.
+    const email = req.body.email;              // name of the user.
     const password = req.body.password;      // password of the user.
 
     // Hashing the password sent by the user to check with the actual
@@ -114,7 +114,7 @@ exports.validateUserProfile = (req, res, next) => {
     const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
 
     // Validating the user with its respected username and password.
-    db.execute("SELECT User.name, User.password, User.location FROM User WHERE User.name = ? AND User.password = ?", [name, hashedPassword])
+    db.execute("SELECT User.email, User.password FROM User WHERE User.email = ? AND User.password = ?", [email, hashedPassword])
     .then(([rows, constraints]) => {
         // Checking if the data provided by the user in the request body
         // matches the data stored in the actual database and is not empty.
