@@ -104,8 +104,9 @@ exports.createUserProfile = (req, res, next) => {
 
 exports.deleteUser = (req, res, next) => {
     const email = req.body.email;
+    const password = crypto.createHash('sha256').update(req.body.password).digest('hex');
 
-    db.query("DELETE FROM User WHERE email = ?", [email])
+    db.query("DELETE FROM User WHERE email = ? AND password = ?", [email])
     .then(result => {
         if(result[0].affectedRows > 0) {
             res.status(201).json({
