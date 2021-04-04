@@ -1,5 +1,8 @@
 exports.generateOTP = (min = 000000, max = 999999) => {
-    return Math.floor(Math.abs(Math.random() * (min - max) + min)).toString();
+    const re = /\d\.(\d{6}).*/i;
+    let value = re.exec(Math.random().toString());
+
+    return value[1];
 }
 
 exports.generateUnixTimestamp = () => {
