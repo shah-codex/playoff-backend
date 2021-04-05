@@ -224,3 +224,32 @@ exports.unjoinTeam = (req, res, next) => {
         });
     });
 }
+
+// Retrieving team players data for the requested team.
+exports.teamPlayers = (req, res, next) => {
+    const teamName = req.params.team;       // Name of the team extracted from the query parameter.
+
+    // Query to get the player names corresponding to the given team.
+    db.execute("SELECT User.name, User.email FROM User INNER JOIN Player ON User.email = Player.name WHERE Player.team = ?", [teamName])
+    .then(([result, fields]) => {
+        // If there are no players in the team or some non-existing team name
+        // is entered then throwing an error.
+        if(result.length === 0) {
+            throw new Error('Empty result set');
+        }
+
+        // Continuing with the retrieved players and sending the response back
+        // to the client/user.
+        res.status(200).json({
+            message: 'success',
+            result: result
+        });
+    })
+    .catch(err => {
+        // In case of some error sending failure response with status code 500.
+        console.log(err);
+        res.status(500).json({
+            message: 'failed'
+        })
+    })
+}
