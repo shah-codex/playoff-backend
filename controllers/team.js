@@ -174,8 +174,11 @@ exports.unjoinTeam = (req, res, next) => {
         return true;
     })
     .then(result => {
+        // Retrieving the player information of whether or not the player is
+        // in the playing team or not.
         db.execute("SELECT Player.is_playing FROM Player WHERE Player.name = ?", [playerName])
         .then(([result, fields]) => {
+            // Returning the value of the observing player to the next promise.
             return result[0].is_playing;
         })
         .then(isPlaying => {
@@ -188,8 +191,8 @@ exports.unjoinTeam = (req, res, next) => {
                     throw new Error('invalid username');
                 }
 
-                // Updating the team players count in case of the player has
-                // successfully unjoined the team.
+                // Updating the team players count and playing count in case of the
+                // player has successfully unjoined the team.
                 db.query("UPDATE Team SET Team.joined_players = Team.joined_players - 1, Team.playing = IF(?, Team.playing - 1, Team.playing) WHERE Team.name = ?", [isPlaying, teamName])
                 .then(result => {
                     // Sending the json response to the user if the player has successfully
@@ -212,11 +215,11 @@ exports.unjoinTeam = (req, res, next) => {
                 });
             })
             .catch(err => {
-                // In case if the player name was not valid,
-                // sending 'invalid player name' response to the user.
+                // In case if the player name was not valid for the corresponding team,
+                // sending 'invalid team name' response to the user.
                 console.log(err);
                 res.status(500).json({
-                    message: 'invalid player name'
+                    message: 'invalid team name'
                 });
             });
         })
