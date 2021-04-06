@@ -174,36 +174,50 @@ exports.unjoinTeam = (req, res, next) => {
         return true;
     })
     .then(result => {
-        // Deleting the user from the database for it's respected team.
-        db.query("DELETE FROM Player WHERE Player.name = ? AND Player.team = ?", [playerName, teamName])
-        .then(result => {
-            // Checking if the player is deleted successfully or not.
-            if(result[0].affectedRows === 0) {
-                // Throwing error if the player does not exists.
-                throw new Error('invalid username');
-            }
-
-            // Updating the team players count in case of the player has
-            // successfully unjoined the team.
-            db.query("UPDATE Team SET Team.joined_players = Team.joined_players - 1 WHERE Team.name = ?", [teamName])
+        db.execute("SELECT Player.is_playing FROM Player WHERE Player.name = ?", [playerName])
+        .then(([result, fields]) => {
+            return result[0].is_playing;
+        })
+        .then(isPlaying => {
+            // Deleting the user from the database for it's respected team.
+            db.query("DELETE FROM Player WHERE Player.name = ? AND Player.team = ?", [playerName, teamName])
             .then(result => {
-                // Sending the json response to the user if the player has successfully
-                // unjoined the team.
-                res.status(201).json({
-                    message: 'Deleted user successfully',
-                    player: {
-                        team: teamName,
-                        user: playerName
-                    }
+                // Checking if the player is deleted successfully or not.
+                if(result[0].affectedRows === 0) {
+                    // Throwing error if the player does not exists.
+                    throw new Error('invalid username');
+                }
+
+                // Updating the team players count in case of the player has
+                // successfully unjoined the team.
+                db.query("UPDATE Team SET Team.joined_players = Team.joined_players - 1, Team.playing = IF(?, Team.playing - 1, Team.playing) WHERE Team.name = ?", [isPlaying, teamName])
+                .then(result => {
+                    // Sending the json response to the user if the player has successfully
+                    // unjoined the team.
+                    res.status(201).json({
+                        message: 'Deleted user successfully',
+                        player: {
+                            team: teamName,
+                            user: playerName
+                        }
+                    });
+                })
+                .catch(err => {
+                    // In case of some failure to update the player count for the team,
+                    // sending the failed message to the user.
+                    console.log(err);
+                    res.status(500).json({
+                        message: 'failed to update user count for a team'
+                    });
                 });
             })
             .catch(err => {
-                // In case of some failure to update the player count for the team,
-                // sending the failed message to the user.
+                // In case if the player name was not valid,
+                // sending 'invalid player name' response to the user.
                 console.log(err);
                 res.status(500).json({
-                    message: 'failed to update user count for a team'
-                })
+                    message: 'invalid player name'
+                });
             });
         })
         .catch(err => {
