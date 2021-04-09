@@ -204,6 +204,23 @@ exports.unjoinTeam = (req, res, next) => {
                             user: playerName
                         }
                     });
+
+                    // Returning isPlaying to the next promise.
+                    return isPlaying;
+                })
+                .then((isPlaying) => {
+                    if(isPlaying) {
+                        // Updating the tournament state if the unjoined player is
+                        // in the playing team and also that team has joined a tournament.
+                        db.query("UPDATE Team INNER JOIN Tournament ON Team.tournament = Tournament._id SET Team.tournament = NULL, Tournament.teams_participated = Tournament.teams_participated - 1 WHERE NOT Team.tournament IS NULL AND Team.name = ? AND NOT Team.playing BETWEEN Tournament.min_players AND Tournament.max_players", [teamName])
+                        .then(result => {
+                            // Success, do nothing.
+                        })
+                        .catch(err => {
+                            // Print the error.
+                            console.log(err);
+                        });
+                    }
                 })
                 .catch(err => {
                     // In case of some failure to update the player count for the team,
