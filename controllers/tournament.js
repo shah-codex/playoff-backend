@@ -110,6 +110,42 @@ exports.joinTournament = (req, res, next) => {
     });
 }
 
+exports.unjoinTournament = (req, res, next) => {
+    const tournamentId = req.body.tournament;
+    const teamName = req.body.team;
+
+    db.query("UPDATE Teams SET Teams.tournament = NULL WHERE Team.name = ? AND Team.tournament = ?", [teamName, tournamentId])
+    .then(result => {
+        if(result[0].affectedRows === 0) {
+            throw new Error('Invalid team name');
+        }
+    })
+    .then(() => {
+        db.query("UPDATE Tournament SET Tournament.teams_participated = Tournament.teams_participated - 1 WHERE Tournament._id = ?", [tournamentId])
+        .then(result => {
+            if(result[0].affectedRows === 0) {
+                throw new Error('Failed to unjoin the tournament');
+            }
+
+            res.status(200).json({
+                message: 'Successfully unjoined the tournament'
+            });
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(500).json({
+                message: 'failed to unjoin the tournament'
+            });
+        });
+    })
+    .catch(err => {
+        console.log(err);
+        res.status(500).json({
+            message: 'Invalid team name'
+        });
+    });
+}
+
 // Deleting user from a tournament.
 exports.deleteTournament = (req, res, next) => {
     // Extracting the data from the users request body.
