@@ -8,6 +8,8 @@ router.put('/create', tournamentController.createTournament);
 
 router.post('/join', tournamentController.joinTournament);
 
+router.post('/unjoin', tournamentController.unjoinTournament);
+
 router.delete('/delete', tournamentController.deleteTournament);
 
 router.post('/update', tournamentController.updateTournament);
