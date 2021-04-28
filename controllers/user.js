@@ -80,7 +80,7 @@ exports.createUserProfile = (req, res, next) => {
             .then(result => {
                 // Returning the response with the success message with status code 201.
                 return res.status(201).json({
-                    name: username, 
+                    name: username,
                     email: email
                 });
             })
@@ -144,7 +144,7 @@ exports.validateUserProfile = (req, res, next) => {
 
             // Returning the success response if the username and password matches.
             return res.status(200).json({
-                name: name, 
+                name: name,
                 email: email
             });
         } else {
@@ -159,5 +159,38 @@ exports.validateUserProfile = (req, res, next) => {
         return res.status(404).json({
             message: 'incorrect username or password'
         });
+    });
+}
+
+exports.forgotPassword = (req, res, next) => {
+    // Fields retrieved from the request body from the user.
+    const email = req.body.email;                           // Email address of the user.
+    const password = req.body.password;                     // Password to be stored.
+    const oneTimePassword = req.body.oneTimePassword;       // OTP to check with while updating in database.
+
+    // Hashed password to be stored in the database.
+    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+
+    // Executing the query to update the password for the provided username.
+    db.execute("UPDATE User, AuthenticateUser SET User.password = ? WHERE User.email = ? AND User.email = AuthenticateUser.email AND AuthenticateUser.otp = ? AND AuthenticateUser.otp_expiration >= UNIX_TIMESTAMP()", [hashedPassword, email, oneTimePassword])
+    .then(result => {
+        // Throwing error if password was not updated.
+        if(result[0].affectedRows === 0) {
+            throw new Error('Failed to update the password');
+        }
+
+        // Sending the email as response to the client if password
+        // was successfully changed.
+        res.status(200).json({
+            email: email
+        });
+    })
+    .catch(err => {
+        // Printing the error to the console and sending the failure response
+        // to the client.
+        console.log(err);
+        res.status(500).json({
+            message: 'Failed to update the password'
+        })
     });
 }
