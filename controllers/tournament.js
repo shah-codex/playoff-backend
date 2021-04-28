@@ -7,15 +7,15 @@ exports.createTournament = (req, res, next) => {
     // Extracting all the data sent from the user in the body of the request.
     const title = req.body.title;                       // Title of the tournament.
     const game = req.body.game;                         // Name of the sport that the tournament belongs to.
-    const minimumPlayers = req.body.minPlayers;         // Minimum players required in a team to participate in this tournament.
-    const maximumPlayers = req.body.maxPlayers;         // Maximum number of players in a team that can participate in this tournament.
-    const minimumTeams = req.body.minTeams;             // Minimum number of teams that will participate in this tournament.
-    const maximumTeams = req.body.maxTeams;             // Maximum number of teams that can participate in this tournament.
+    const minimumPlayers = req.body.min_players;         // Minimum players required in a team to participate in this tournament.
+    const maximumPlayers = req.body.max_players;         // Maximum number of players in a team that can participate in this tournament.
+    const minimumTeams = req.body.min_teams;             // Minimum number of teams that will participate in this tournament.
+    const maximumTeams = req.body.max_teams;             // Maximum number of teams that can participate in this tournament.
     const location = req.body.location;                 // Location of the tournament i.e. City.
-    const startDate = req.body.startDate;               // The date at which the tournament will start.
-    const endDate = req.body.endDate;                   // The date at which the tournament will end.
+    const startDate = req.body.start_date;               // The date at which the tournament will start.
+    const endDate = req.body.end_date;                   // The date at which the tournament will end.
     const description = req.body.description;           // Description related to the tournament eg. rules, venue, etc.
-    const user = req.body.user;                         // The username/email of the user that created this tournament.
+    const user = req.body.creator;                         // The username/email of the user that created this tournament.
 
     // Unique ID of the tournament generated through hash function SHA-256.
     const id = crypto.createHash('sha256').update((+new Date()).toString() + title).digest('hex');
@@ -63,10 +63,10 @@ exports.createTournament = (req, res, next) => {
 exports.joinTournament = (req, res, next) => {
     // Extracting the data provided from the request body by the client.
     const tournamentId = req.body.tournament;       // The ID of the tournament to which a user wants to participate.
-    const teamName = req.body.team;                 // The name of the team that the user(captain) belongs to.
+    const teamName = req.body.name;                 // The name of the team that the user(captain) belongs to.
 
     // Updating the database to provide participated tournament for a team.
-    db.query("UPDATE Team SET Team.tournament = ? WHERE Team.name = ? AND Team.tournament IS NULL AND Team.playing BETWEEN (SELECT Tournament.min_players FROM Tournament WHERE Tournament._id = ?) AND (SELECT Tournament.max_players FROM Tournament WHERE Tournament._id = ?) AND (SELECT IF(teams_participated < max_teams, TRUE, FALSE) FROM Tournament)", [tournamentId, teamName, tournamentId, tournamentId])
+    db.query("UPDATE Team SET Team.tournament = ? WHERE Team.name = ? AND Team.tournament IS NULL AND Team.playing BETWEEN (SELECT Tournament.min_players FROM Tournament WHERE Tournament._id = ?) AND (SELECT Tournament.max_players FROM Tournament WHERE Tournament._id = ?) AND (SELECT IF(teams_participated < max_teams, TRUE, FALSE) FROM Tournament WHERE Tournament._id = ?)", [tournamentId, teamName, tournamentId, tournamentId, tournamentId])
     .then(result => {
         // Checking the number of rows updated/affected.
         if(result[0].affectedRows === 0) {
@@ -84,11 +84,8 @@ exports.joinTournament = (req, res, next) => {
             .then(result => {
                 // Sending success response if the tournament was joined by a team.
                 res.status(201).json({
-                    message: 'successfully joined the tournament',
-                    tournament: {
-                        tournamentId: tournamentId,
-                        team: teamName
-                    }
+                    tournamentId: tournamentId,
+                    team: teamName
                 });
             })
             .catch(err => {
@@ -251,7 +248,7 @@ exports.getTournaments = (req, res, next) => {
     const currentDate = Math.trunc(+new Date() / 1000);
 
     // Obtaining the tournaments for the given location and greater than the current timestamp.
-    db.execute("SELECT Tournament._id 'tournament_id', Tournament.title, Tournament.game, Tournament.min_players, Tournament.max_players, Tournament.start_date FROM Tournament WHERE Tournament.start_date > ? AND location = ?", [currentDate, location])
+    db.execute("SELECT Tournament._id 'tournament_id', Tournament.title, Tournament.game, Tournament.min_players, Tournament.max_players, Tournament.start_date, Tournament.location FROM Tournament WHERE Tournament.start_date > ? AND Tournament.location = ?", [currentDate, location])
     .then(([result, fields]) => {
         // Checking if the length of the result or rows.
         if(result.length === 0) {
@@ -274,11 +271,10 @@ exports.getTournaments = (req, res, next) => {
 exports.getTournament = (req, res, next) => {
     // Extracting the provided data from the request body.
     const tournamentId = req.params.tournament;         // Tournament ID of the tournament to retrive data of.
-    const location = req.params.location;               // Location of the tournament to be held at.
 
     // Obtaining the tournament based on the tournament ID and location of the tournament.
-    db.execute("SELECT Tournament._id 'tournament_id', Tournament.title, Tournament.game, Tournament.min_players, Tournament.max_players, Tournament.max_Teams, Tournament.min_Teams, Tournament.start_date, Tournament.end_date, Tournament.description, User.name FROM Tournament INNER JOIN User ON User.email = Tournament.creator WHERE Tournament._id = ? AND Tournament.location = ?", [tournamentId, location])
-    .then(([result, fields]) => {
+    db.execute("SELECT Tournament._id 'tournament_id', Tournament.title, Tournament.game, Tournament.min_players, Tournament.max_players, Tournament.max_teams, Tournament.min_teams, Tournament.start_date, Tournament.end_date, Tournament.description, Tournament.location, Tournament.teams_participated FROM Tournament WHERE Tournament._id = ?", [tournamentId])
+    .then(([result, constraints]) => {
         // Checking the return rows/result.
         if(result.length === 0) {
             // Throwing error if the return tournament row was not present or has already started.
@@ -287,7 +283,7 @@ exports.getTournament = (req, res, next) => {
 
         // Returning the response back to the user containing the tournament data in case
         // if the tournament was successfully received.
-        res.status(200).json(result);
+        res.status(200).json(result[0]);
     })
     .catch(err => {
         // Sending error message in response with status code 500 in case of no tournament
