@@ -4,7 +4,7 @@ const db = require(__dirname + '/../database/playoff.js');
 exports.createTeam = (req, res, next) => {
     // Extracting the values to the corresponding keys from the request
     // sent by the user to create the team. also in short called team data.
-    const teamName = req.body.team;             // Name of the team by which to register.
+    const teamName = req.body.name;             // Name of the team by which to register.
     const teamCaptain = req.body.captain;       // The captain/creator of the team.
     let tournamentId = req.body.tournament;     // The tournament ID of the tournament to which the team will participate.
 
