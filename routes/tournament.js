@@ -16,6 +16,6 @@ router.post('/update', tournamentController.updateTournament);
 
 router.get('/:location', tournamentController.getTournaments);
 
-router.get('/:location/:tournament', tournamentController.getTournament);
+router.get('/id/:tournament', tournamentController.getTournament);
 
 module.exports = router;
