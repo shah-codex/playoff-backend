@@ -83,7 +83,7 @@ exports.joinTeam = (req, res, next) => {
     // Extracting the values to the corresponding keys from the request body
     // sent by the user to join the team.
     const teamName = req.body.team;         // Name of the team to join.
-    const playerName = req.body.user;       // Name/Email of the player to join the team.
+    const playerName = req.body.name;       // Name/Email of the player to join the team.
 
     // Inserting the player details who wan't to join the team into the database.
     // Throws an error in case if the player already exists in any team.
@@ -93,11 +93,8 @@ exports.joinTeam = (req, res, next) => {
         // to the user.
         if(result[0].affectedRows > 0) {
             res.status(201).json({
-                message: 'Successfully joined a team',
-                player: {
-                    user: playerName,
-                    team: teamName
-                }
+                name: playerName,
+                team: teamName
             });
 
             // Incrementing the total players in the corresponding team by one.
@@ -274,16 +271,68 @@ exports.teamPlayers = (req, res, next) => {
 
         // Continuing with the retrieved players and sending the response back
         // to the client/user.
-        res.status(200).json({
-            message: 'success',
-            result: result
-        });
+        res.status(200).json(result);
     })
     .catch(err => {
         // In case of some error sending failure response with status code 500.
         console.log(err);
         res.status(500).json({
             message: 'failed'
-        })
+        });
     })
+}
+
+exports.getTeams = (req, res, next) => {
+    db.execute("SELECT Team.name, Team.tournament, Team.joined_players, Team.playing FROM Team")
+    .then(([result, fields]) => {
+        if(result.length === 0) {
+            throw new Error('No Teams to show');
+        }
+
+        res.status(200).json(result);
+    })
+    .catch(err => {
+        console.log(err);
+        res.status(500).json({
+            message: 'failed'
+        });
+    });
+}
+
+exports.getPlayer = (req, res, next) => {
+	const playerName = req.params.playerName;
+
+	db.execute("SELECT Player.name, Player.team FROM Player WHERE Player.name = ?", [playerName])
+	.then(([result, constraints]) => {
+		if(result.length === 0) {
+			throw new Error('Player not joined the team');
+		}
+
+		res.status(200).json(result[0]);
+	})
+	.catch(err => {
+		console.log(err);
+		res.status(500).json({
+			message: 'failed to get player'
+		});
+	});
+}
+
+exports.getTeam = (req, res, next) => {
+    const teamName = req.params.teamName;
+
+    db.execute("SELECT Team.name, Team.captain, Team.tournament, Team.joined_players, Team.playing FROM Team WHERE Team.name = ?", [teamName])
+    .then(([result, constraints]) => {
+        if(result.length === 0) {
+            throw new Error('Team name does not exists');
+        }
+
+        res.status(200).json(result[0]);
+    })
+    .catch(err => {
+        console.log(err);
+        res.status(500).json({
+            message: 'failed to retrieve team'
+        });
+    });
 }
