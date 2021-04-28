@@ -80,8 +80,8 @@ exports.createUserProfile = (req, res, next) => {
             .then(result => {
                 // Returning the response with the success message with status code 201.
                 return res.status(201).json({
-                    message: 'successfully registered',
-                    user: { name: username, email: email }
+                    name: username, 
+                    email: email
                 });
             })
             .catch(err => {
@@ -144,8 +144,8 @@ exports.validateUserProfile = (req, res, next) => {
 
             // Returning the success response if the username and password matches.
             return res.status(200).json({
-                message: 'login successful',
-                user: { name: name, email: email }
+                name: name, 
+                email: email
             });
         } else {
             // Throwing a error if row doesn't have any data.
